@@ -75,6 +75,7 @@ Example::
     if gate.status is REQUIRES_HUMAN_VERIFICATION:
         render_warning(gate.violations)
     report.verification = gate          # the report carries its gate
+"""
 
 
 
