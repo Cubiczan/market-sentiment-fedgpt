@@ -210,7 +210,7 @@ Reports with violations are marked `REQUIRES_HUMAN_VERIFICATION` with a confiden
 
 ## Public API: the verification gate
 
-`MarketSentimentReport.verification` is a `VerificationGate` — and since the row-29 canonicalization it is an **immutable, frozen dataclass** (vendored from `cubiczan-resilience` v0.2.0). This is a **deliberate, accepted breaking change** from the pre-migration mutable dataclass:
+`MarketSentimentReport.verification` is a `VerificationGate` — and since the row-29 canonicalization it is an **immutable, frozen dataclass** (vendored from `cubiczan-resilience` v0.2.1). This is a **deliberate, accepted breaking change** from the pre-migration mutable dataclass:
 
 - Field assignment (`gate.status = ...`) now raises `FrozenInstanceError`. That is the contract: a gate is a verbatim verdict, never something to be edited in place after the fact.
 - To derive a modified copy, use `dataclasses.replace(gate, ...)` — the supported path. It returns a new frozen instance with the substituted fields, leaving the original untouched.

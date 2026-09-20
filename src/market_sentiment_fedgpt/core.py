@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List
 
-# Vendored canonical gate (cubiczan-resilience 0.2.0 @ 09ceaf3a) — see
+# Vendored canonical gate (cubiczan-resilience 0.2.1 @ 2a35120b) — see
 # _vendored/verification_gate.py for provenance and the keep-in-sync rule.
 from market_sentiment_fedgpt._vendored.verification_gate import (
     VerificationGate,
