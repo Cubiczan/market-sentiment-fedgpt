@@ -208,6 +208,22 @@ The verification gate enforces data quality before a report is considered action
 
 Reports with violations are marked `REQUIRES_HUMAN_VERIFICATION` with a confidence penalty of 12 points per violation (minimum 50%).
 
+## Public API: the verification gate
+
+`AnalysisResult.verification` is a `VerificationGate` — and since the row-29 canonicalization it is an **immutable, frozen dataclass** (vendored from `cubiczan-resilience` v0.2.0). This is a **deliberate, accepted breaking change** from the pre-migration mutable dataclass:
+
+- Field assignment (`gate.status = ...`) now raises `FrozenInstanceError`. That is the contract: a gate is a verbatim verdict, never something to be edited in place after the fact.
+- To derive a modified copy, use `dataclasses.replace(gate, ...)` — the supported path. It returns a new frozen instance with the substituted fields, leaving the original untouched.
+- The gate is safe to share across threads and store in ledgers precisely because it cannot be mutated after construction.
+
+```python
+from dataclasses import replace
+
+gate = report.verification
+# gate.status = "CLEAR"          # FrozenInstanceError — by design
+downgraded = replace(gate, status="REQUIRES_HUMAN_VERIFICATION")  # new frozen instance
+```
+
 ## Project Structure
 
 ```
