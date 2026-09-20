@@ -2,8 +2,11 @@
 
 Source:    github.com/icohangar-ops/cubiczan-resilience
            python/src/cubiczan_resilience/verification_gate.py
-Upstream:  package version 0.2.0, commit 09ceaf3a31fbf041fd1a6e736fa7c237218e2e8f
-           (squash-merge of icohangar-ops/cubiczan-resilience#3, row 29)
+Upstream:  package version 0.2.1, commit 2a35120bd21ed967a8d72a34c2d0f3e6807cad67
+           (squash-merge of icohangar-ops/cubiczan-resilience#4, row 29
+           follow-through: build_gate grows the severity_hint parameter and the
+           SEVERITY_FLOOR constant, retiring the empty-input overrides in
+           earnings-call-nlp-lab and hedge-fund-13f-radar)
 
 Why vendored: market-sentiment-fedgpt's documented product posture is
 "Zero External Dependencies — runs entirely on the Python standard
@@ -72,7 +75,8 @@ Example::
     if gate.status is REQUIRES_HUMAN_VERIFICATION:
         render_warning(gate.violations)
     report.verification = gate          # the report carries its gate
-"""
+
+
 
 from __future__ import annotations
 
@@ -101,6 +105,24 @@ PENALTY_PER_VIOLATION = 12
 
 #: Confidence never drops below this, so a failing report stays actionable.
 CONFIDENCE_FLOOR = 50
+
+#: severity_hint value for :func:`build_gate`: pins a failing gate's
+#: confidence at :data:`CONFIDENCE_FLOOR` no matter how few violations
+#: produced it.
+#:
+#: Why this exists (row 29 follow-through): the donor repos' empty-input
+#: cases (an empty transcript, an empty holdings file) are categorically
+#: worse than one minor gap, but the equal-weight arithmetic scores a
+#: single violation 88. earnings-call-nlp-lab and hedge-fund-13f-radar
+#: each carried a local override pinning that case at the floor; this
+#: hint moves the decision here so those overrides could be deleted. The
+#: caller states only where the gate must sit — which violations, which
+#: penalty, which floor all stay canonical.
+#:
+#: Import policy: import these constants to verify or display them (tests,
+#: audit logs, report footnotes) — never to derive thresholds from them.
+#: Derived consumer logic breaks silently when the canonical number moves.
+SEVERITY_FLOOR = "floor"
 
 
 @dataclass(frozen=True)
@@ -136,20 +158,42 @@ class VerificationGate:
         return [f"- {item}" for item in self.violations]
 
 
-def build_gate(violations: Sequence[str]) -> VerificationGate:
+def build_gate(
+    violations: Sequence[str],
+    severity_hint: str | None = None,
+) -> VerificationGate:
     """Compute the canonical gate from a list of violation strings.
 
     This function is the single source of the confidence arithmetic. The
     donor repos inlined it with diverging penalties (-12 / -10); every
     consumer now calls this instead.
 
+    Args:
+        violations: Human-readable violation sentences; blank and
+            whitespace-only entries are silently filtered before scoring.
+        severity_hint: ``None`` (the default) keeps the equal-weight
+            arithmetic: ``100 - PENALTY_PER_VIOLATION * len(violations)``,
+            floored at :data:`CONFIDENCE_FLOOR`. :data:`SEVERITY_FLOOR`
+            pins a failing gate at :data:`CONFIDENCE_FLOOR` regardless of
+            violation count — for the categorically-severe cases (an empty
+            input file) where one violation does not capture how bad the
+            situation is. Any other value raises ``ValueError``: a typo'd
+            hint must fail loudly, not silently no-op.
+
     Warning: blank and whitespace-only entries are silently filtered
     before scoring, so a violations list containing only blanks yields a
-    CLEAR gate at confidence 100. That is "no violations found", which is
-    only as trustworthy as the checks that produced the list — callers
-    assembling violations programmatically must not treat it as proof the
-    checks ran.
+    CLEAR gate at confidence 100 — even with
+    ``severity_hint=SEVERITY_FLOOR``. A hint qualifies the severity of
+    real violations; it cannot manufacture a violation out of blank
+    input. That is "no violations found", which is only as trustworthy as
+    the checks that produced the list — callers assembling violations
+    programmatically must not treat it as proof the checks ran.
     """
+    if severity_hint is not None and severity_hint != SEVERITY_FLOOR:
+        raise ValueError(
+            f"unknown severity_hint {severity_hint!r}: the only supported "
+            f"value is SEVERITY_FLOOR ({SEVERITY_FLOOR!r}) or None"
+        )
     cleaned = [str(v) for v in violations if str(v).strip()]
     if not cleaned:
         return VerificationGate(
@@ -157,10 +201,13 @@ def build_gate(violations: Sequence[str]) -> VerificationGate:
             confidence=100,
             violations=[],
         )
-    confidence = max(
-        CONFIDENCE_FLOOR,
-        100 - PENALTY_PER_VIOLATION * len(cleaned),
-    )
+    if severity_hint == SEVERITY_FLOOR:
+        confidence = CONFIDENCE_FLOOR
+    else:
+        confidence = max(
+            CONFIDENCE_FLOOR,
+            100 - PENALTY_PER_VIOLATION * len(cleaned),
+        )
     return VerificationGate(
         status=REQUIRES_HUMAN_VERIFICATION,
         confidence=confidence,

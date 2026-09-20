@@ -1,7 +1,7 @@
 """Regression: the public VerificationGate contract is IMMUTABLE.
 
 The pre-migration dataclass was mutable; the vendored canonical gate
-(cubiczan-resilience v0.2.0) is frozen by design. Consumers must derive
+(cubiczan-resilience v0.2.1) is frozen by design. Consumers must derive
 modified copies with dataclasses.replace, not field assignment. These
 tests pin that contract so an accidental unfreeze fails CI.
 """
@@ -10,6 +10,7 @@ from dataclasses import FrozenInstanceError, replace
 
 import pytest
 
+from market_sentiment_fedgpt._vendored.verification_gate import SEVERITY_FLOOR
 from market_sentiment_fedgpt.core import VerificationGate, build_gate
 
 
@@ -48,3 +49,16 @@ def test_replace_on_a_clear_gate_downgrades_without_mutation():
     downgraded = replace(gate, status="REQUIRES_HUMAN_VERIFICATION")
     assert gate.status == "CLEAR"
     assert downgraded.status == "REQUIRES_HUMAN_VERIFICATION"
+
+
+def test_vendored_copy_tracks_upstream_0_2_1_severity_hint():
+    """Keep-in-sync proof (v0.2.1 port): the vendored build_gate carries the
+    upstream severity_hint parameter added in cubiczan-resilience#4 — pinning
+    failing gates at the floor and raising on unknown hints, exactly as the
+    canonical module does."""
+    gate = build_gate(["holdings file is empty"], severity_hint=SEVERITY_FLOOR)
+    assert gate.status == "REQUIRES_HUMAN_VERIFICATION"
+    assert gate.confidence == 50
+    assert gate.violations == ["holdings file is empty"]
+    with pytest.raises(ValueError):
+        build_gate(["x"], severity_hint="Floor")
