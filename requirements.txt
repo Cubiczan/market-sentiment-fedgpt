@@ -1,3 +1,2 @@
 pytest>=7.0
 airbyte-agent-sdk>=0.1.0
-cubiczan-resilience @ git+https://github.com/icohangar-ops/cubiczan-resilience.git@09ceaf3a31fbf041fd1a6e736fa7c237218e2e8f

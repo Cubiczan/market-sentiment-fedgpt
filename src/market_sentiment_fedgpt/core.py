@@ -7,7 +7,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List
 
-from cubiczan_resilience.verification_gate import VerificationGate, build_gate
+# Vendored canonical gate (cubiczan-resilience 0.2.0 @ 09ceaf3a) — see
+# _vendored/verification_gate.py for provenance and the keep-in-sync rule.
+from market_sentiment_fedgpt._vendored.verification_gate import (
+    VerificationGate,
+    build_gate,
+)
 
 __all__ = ["IndicatorSignal", "VerificationGate", "MarketSentimentReport", "analyze_market"]
 
@@ -34,7 +39,7 @@ class IndicatorSignal:
     score: int
 
 
-# VerificationGate moved to the canonical cubiczan_resilience.verification_gate
+# VerificationGate vendored from canonical cubiczan_resilience.verification_gate
 # module (row 29): one deterministic confidence rule for the whole portfolio
 # (PENALTY_PER_VIOLATION=12, CONFIDENCE_FLOOR=50). This module re-exports it
 # for backwards-compatible imports; construct gates with build_gate().
