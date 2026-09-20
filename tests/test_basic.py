@@ -276,7 +276,12 @@ class TestVerify:
             {"indicator": ind, "value": "50", "source_date": "2025-05-08"}
             for ind in REQUIRED_INDICATORS
         ]
-        speech = "This is a sufficiently long Fed speech with enough words to pass the forty word minimum requirement for reliable tone analysis."
+        speech = (
+            "Chair Powell testified that inflation has moderated meaningfully over the past year, "
+            "that the labor market has cooled to pre-pandemic norms, and that the committee retains "
+            "flexibility to adjust policy as incoming data either confirm the disinflation trajectory "
+            "or reveal renewed price pressures."
+        )
         gate = _verify(rows, speech, None)
         assert gate.status == "CLEAR"
         assert gate.confidence == 100
@@ -286,7 +291,12 @@ class TestVerify:
         rows = [
             {"indicator": "vix", "value": "20", "source_date": "2025-05-08"},
         ]
-        speech = "This is a sufficiently long Fed speech with enough words to pass the forty word minimum requirement for reliable tone analysis."
+        speech = (
+            "Chair Powell testified that inflation has moderated meaningfully over the past year, "
+            "that the labor market has cooled to pre-pandemic norms, and that the committee retains "
+            "flexibility to adjust policy as incoming data either confirm the disinflation trajectory "
+            "or reveal renewed price pressures."
+        )
         gate = _verify(rows, speech, None)
         assert gate.status == "REQUIRES_HUMAN_VERIFICATION"
         assert any("missing required indicators" in v for v in gate.violations)
@@ -304,7 +314,12 @@ class TestVerify:
         rows = [
             {"indicator": "vix", "value": "20", "source_date": ""},
         ]
-        speech = "This is a sufficiently long Fed speech with enough words to pass the forty word minimum requirement for reliable tone analysis."
+        speech = (
+            "Chair Powell testified that inflation has moderated meaningfully over the past year, "
+            "that the labor market has cooled to pre-pandemic norms, and that the committee retains "
+            "flexibility to adjust policy as incoming data either confirm the disinflation trajectory "
+            "or reveal renewed price pressures."
+        )
         gate = _verify(rows, speech, None)
         assert any("source_date" in v for v in gate.violations)
 
@@ -313,7 +328,12 @@ class TestVerify:
             {"indicator": ind, "value": "50", "source_date": "2025-05-08"}
             for ind in REQUIRED_INDICATORS
         ]
-        speech = "This is a sufficiently long Fed speech with enough words to pass the forty word minimum requirement for reliable tone analysis."
+        speech = (
+            "Chair Powell testified that inflation has moderated meaningfully over the past year, "
+            "that the labor market has cooled to pre-pandemic norms, and that the committee retains "
+            "flexibility to adjust policy as incoming data either confirm the disinflation trajectory "
+            "or reveal renewed price pressures."
+        )
         portfolio_file = tmp_path / "portfolio.csv"
         portfolio_file.write_text("ticker,sector,weight,source\nNVDA,Technology,0.14,\n")
         gate = _verify(rows, speech, portfolio_file)
@@ -452,6 +472,7 @@ class TestCLI:
         )
         from market_sentiment_fedgpt.cli import main
         result = main([
+            "analyze",
             "--indicators", str(indicators),
             "--speech", str(speech),
         ])

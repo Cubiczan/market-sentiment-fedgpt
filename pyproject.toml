@@ -9,7 +9,9 @@ description = "FedGPT plus market sentiment analyzer with CHP-style adversarial 
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Cubiczan" }]
-dependencies = []
+dependencies = [
+    "cubiczan-resilience @ git+https://github.com/icohangar-ops/cubiczan-resilience.git@09ceaf3a31fbf041fd1a6e736fa7c237218e2e8f",
+]
 
 [project.scripts]
 market-sentiment-fedgpt = "market_sentiment_fedgpt.cli:main"
