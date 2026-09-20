@@ -3,9 +3,18 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List
+
+# Vendored canonical gate (cubiczan-resilience 0.2.0 @ 09ceaf3a) — see
+# _vendored/verification_gate.py for provenance and the keep-in-sync rule.
+from market_sentiment_fedgpt._vendored.verification_gate import (
+    VerificationGate,
+    build_gate,
+)
+
+__all__ = ["IndicatorSignal", "VerificationGate", "MarketSentimentReport", "analyze_market"]
 
 
 REQUIRED_INDICATORS = {
@@ -30,13 +39,10 @@ class IndicatorSignal:
     score: int
 
 
-@dataclass
-class VerificationGate:
-    status: str
-    confidence: int
-    violations: List[str] = field(default_factory=list)
-
-
+# VerificationGate vendored from canonical cubiczan_resilience.verification_gate
+# module (row 29): one deterministic confidence rule for the whole portfolio
+# (PENALTY_PER_VIOLATION=12, CONFIDENCE_FLOOR=50). This module re-exports it
+# for backwards-compatible imports; construct gates with build_gate().
 @dataclass
 class MarketSentimentReport:
     regime: str
@@ -176,12 +182,10 @@ def _verify(rows: Iterable[Dict[str, str]], speech: str, portfolio_path: str | P
         portfolio_rows = _read_csv(portfolio_path)
         if any(not row.get("source") for row in portfolio_rows):
             violations.append("one or more portfolio rows are missing source")
-    confidence = 100 if not violations else max(50, 100 - 12 * len(violations))
-    return VerificationGate(
-        status="CLEAR" if confidence == 100 else "REQUIRES_HUMAN_VERIFICATION",
-        confidence=confidence,
-        violations=violations,
-    )
+    # Canonical arithmetic (row 29): confidence and status come from the
+    # shared rule — PENALTY_PER_VIOLATION=12 per violation, CONFIDENCE_FLOOR=50.
+    # This repo already used -12, so confidences are unchanged here.
+    return build_gate(violations)
 
 
 def report_json(report: MarketSentimentReport) -> str:
