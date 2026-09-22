@@ -1,0 +1,23 @@
+{
+  "manifest_version": 1,
+  "component": "verification-gate",
+  "source_module": "market_sentiment_fedgpt/_vendored/verification_gate.py",
+  "upstream_package": "cubiczan-resilience",
+  "gate": {
+    "frozen_dataclass": true,
+    "penalty_per_violation": 12,
+    "confidence_floor": 50,
+    "severity_floor_hint": "floor",
+    "upstream_version": "0.2.1",
+    "status_vocabulary": [
+      "CLEAR",
+      "REQUIRES_HUMAN_VERIFICATION"
+    ],
+    "checks": [
+      "all six required indicators present",
+      "every indicator row carries a source_date",
+      "fed speech text is at least 40 words",
+      "every portfolio row carries a source (when a portfolio is provided)"
+    ]
+  }
+}
