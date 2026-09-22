@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 FRED_SERIES_MAP = {
-    "aaii_bull_bear": "AAII_BULL_BEAR",       # Not directly in FRED -- derived
+    "aaii_bull_bear": None,                      # Not in FRED; always falls back to CSV (README "FRED Series Mappings")
     "naaim_exposure": None,                      # NAAIM -- not in FRED
     "vix": "VIXCLS",                             # CBOE Volatility Index
     "put_call": "CBOE_PC",                       # CBOE Total Put/Call Ratio (discontinued) or use PC

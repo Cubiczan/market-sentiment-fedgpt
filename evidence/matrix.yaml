@@ -1,0 +1,309 @@
+# evidence/matrix.yaml — every capability claim bound to deterministic evidence.
+#
+# Verifier: tools/verify_evidence_matrix.py — vendored byte-identical from the
+# canonical standard kit (icohangar-ops/consensus-hardening-protocol, PR #5,
+# kit commit 88067e4, EVIDENCE_MATRIX_VERIFIER_VERSION = "1.0.0"). CI runs it
+# fail-closed BEFORE any install step (.github/workflows/evidence-matrix.yml).
+# There are no skip flags: a row whose evidence is missing or mismatches fails
+# the build on every run.
+#
+# Evidence types (closed set, schema v1):
+#   test           — pytest node id; statically checked by the verifier and
+#                    executed by the test suite
+#   script         — executable repo script, exit 0 required, hard 120s
+#                    timeout, no network (executed by the verifier itself)
+#   manifest_field — dotted path in a committed JSON/YAML file whose value
+#                    equals the pinned value
+#   artifact_hash  — sha256 pin of a committed file's bytes
+schema_version: 1
+repo: market-sentiment-fedgpt
+
+claims:
+  # --- Key Features: analysis surface ----------------------------------------
+
+  - id: C001
+    claim: >-
+      Fed Tone Analysis scores Federal Reserve speech text using curated
+      hawkish and dovish keyword sets and classifies the tone as HAWKISH,
+      BALANCED, or DOVISH with a numeric score.
+    source: "README.md#key-features"
+    evidence:
+      - type: test
+        ref: "tests/test_basic.py::TestFedScore::test_hawkish_speech"
+      - type: test
+        ref: "tests/test_basic.py::TestFedScore::test_dovish_speech"
+      - type: test
+        ref: "tests/test_basic.py::TestFedScore::test_balanced_speech"
+      - type: test
+        ref: "tests/test_basic.py::TestFedScore::test_keyword_counts"
+      - type: test
+        ref: "tests/test_basic.py::TestAnalyzeMarket::test_hawkish_tone"
+      - type: test
+        ref: "tests/test_basic.py::TestAnalyzeMarket::test_dovish_speech"
+      - type: script
+        ref: "scripts/verify_core_claims.py"
+        timeout_seconds: 120
+
+  - id: C002
+    claim: >-
+      Market Regime Detection aggregates the six standard sentiment indicators
+      into a composite score and classifies the current market regime as
+      EXUBERANT, NEUTRAL, or FEARFUL.
+    source: "README.md#key-features"
+    evidence:
+      - type: test
+        ref: "tests/test_basic.py::TestRegime::test_exuberant"
+      - type: test
+        ref: "tests/test_basic.py::TestRegime::test_fearful"
+      - type: test
+        ref: "tests/test_basic.py::TestRegime::test_neutral"
+      - type: test
+        ref: "tests/test_basic.py::TestConstants::test_required_indicators_six"
+      - type: test
+        ref: "tests/test_basic.py::TestConstants::test_required_indicators_content"
+      - type: script
+        ref: "scripts/verify_core_claims.py"
+        timeout_seconds: 120
+
+  - id: C003
+    claim: >-
+      Policy Probability Path models 3-month, 6-month, and 12-month rate cut
+      probabilities based on the interaction between the sentiment score and
+      the Fed tone.
+    source: "README.md#key-features"
+    evidence:
+      - type: test
+        ref: "tests/test_basic.py::TestPolicyPath::test_returns_three_horizons"
+      - type: test
+        ref: "tests/test_basic.py::TestPolicyPath::test_hawkish_tone_reduces_cut_probability"
+      - type: test
+        ref: "tests/test_basic.py::TestPolicyPath::test_fearful_sentiment_increases_cut_probability"
+      - type: test
+        ref: "tests/test_basic.py::TestPolicyPath::test_probabilities_bounded"
+      - type: test
+        ref: "tests/test_basic.py::TestPolicyPath::test_monotonic_horizons"
+      - type: script
+        ref: "scripts/verify_core_claims.py"
+        timeout_seconds: 120
+
+  - id: C004
+    claim: >-
+      Portfolio Risk Notes scans holdings and flags rate-sensitive sector
+      exposure (Real Estate, Utilities) under a HAWKISH tone, beta-sensitive
+      exposure (Technology, Consumer Discretionary) in an EXUBERANT regime, and
+      oversized positions in a FEARFUL regime.
+    source: "README.md#key-features"
+    evidence:
+      - type: test
+        ref: "tests/test_portfolio_risk_notes.py::test_hawkish_tone_flags_rate_sensitive_sectors"
+      - type: test
+        ref: "tests/test_portfolio_risk_notes.py::test_exuberant_regime_flags_beta_sensitive_sectors"
+      - type: test
+        ref: "tests/test_portfolio_risk_notes.py::test_fearful_regime_flags_oversized_positions"
+      - type: test
+        ref: "tests/test_portfolio_risk_notes.py::test_quiet_book_outside_documented_conditions_gets_no_flags"
+      - type: script
+        ref: "scripts/verify_core_claims.py"
+        timeout_seconds: 120
+
+  # --- Verification gate ------------------------------------------------------
+
+  - id: C005
+    claim: >-
+      The CHP-style verification gate blocks decision-ready status when
+      required indicators are missing, source dates are absent, the Fed speech
+      is too short (fewer than 40 words), or portfolio rows lack sourcing, and
+      reports a confidence percentage with an explicit violation list.
+    source: "README.md#verification-gate"
+    evidence:
+      - type: test
+        ref: "tests/test_basic.py::TestVerify::test_all_indicators_present_clears"
+      - type: test
+        ref: "tests/test_basic.py::TestVerify::test_missing_indicators_flagged"
+      - type: test
+        ref: "tests/test_basic.py::TestVerify::test_missing_source_date_flagged"
+      - type: test
+        ref: "tests/test_basic.py::TestVerify::test_short_speech_flagged"
+      - type: test
+        ref: "tests/test_basic.py::TestVerify::test_portfolio_missing_source_flagged"
+      - type: test
+        ref: "tests/test_market_sentiment.py::test_market_sentiment_sample_requires_no_missing_sources"
+
+  - id: C006
+    claim: >-
+      Reports with violations are marked REQUIRES_HUMAN_VERIFICATION with a
+      confidence penalty of 12 points per violation and a 50% minimum
+      confidence floor; a clean run is CLEAR at 100%.
+    source: "README.md#verification-gate"
+    evidence:
+      - type: test
+        ref: "tests/test_gate_arithmetic.py::test_penalty_is_twelve_points_per_violation"
+      - type: test
+        ref: "tests/test_gate_arithmetic.py::test_confidence_floors_at_fifty_percent"
+      - type: test
+        ref: "tests/test_gate_arithmetic.py::test_clean_input_is_clear_at_full_confidence"
+      - type: manifest_field
+        ref: "evidence/gate_manifest.json:gate.penalty_per_violation"
+        equals: 12
+      - type: manifest_field
+        ref: "evidence/gate_manifest.json:gate.confidence_floor"
+        equals: 50
+      - type: script
+        ref: "scripts/verify_gate_manifest.py"
+        timeout_seconds: 120
+
+  # --- Output surface ---------------------------------------------------------
+
+  - id: C007
+    claim: >-
+      Dual Output Format generates both human-readable Markdown and
+      machine-parsable JSON from the same report object.
+    source: "README.md#key-features"
+    evidence:
+      - type: test
+        ref: "tests/test_basic.py::TestDataClasses::test_report_to_markdown"
+      - type: test
+        ref: "tests/test_basic.py::TestDataClasses::test_report_to_markdown_with_violations"
+      - type: test
+        ref: "tests/test_basic.py::TestDataClasses::test_report_to_dict"
+      - type: test
+        ref: "tests/test_basic.py::TestAnalyzeMarket::test_report_json_output"
+
+  - id: C008
+    claim: >-
+      The CLI provides an analyze command with --indicators, --speech,
+      --portfolio, and --json flags; the console script is declared as
+      market-sentiment-fedgpt in pyproject.toml.
+    source: "README.md#cli"
+    evidence:
+      - type: test
+        ref: "tests/test_basic.py::TestCLI::test_cli_returns_zero"
+      - type: test
+        ref: "tests/test_basic.py::TestCLI::test_cli_missing_args_returns_nonzero"
+      - type: script
+        ref: "scripts/verify_quick_start.sh"
+        timeout_seconds: 120
+      - type: artifact_hash
+        ref: "pyproject.toml"
+        sha256: "7e759e9fdab283b15574965f8eeb271022f0229de6c080e217243bc1b716e38c"
+
+  - id: C009
+    claim: >-
+      The Quick Start command runs the included example data
+      (examples/market_indicators.csv, examples/fed_speech.txt,
+      examples/portfolio.csv) end to end and renders a report.
+    source: "README.md#quick-start"
+    evidence:
+      - type: script
+        ref: "scripts/verify_quick_start.sh"
+        timeout_seconds: 120
+      - type: test
+        ref: "tests/test_market_sentiment.py::test_market_sentiment_sample_requires_no_missing_sources"
+      - type: artifact_hash
+        ref: "examples/market_indicators.csv"
+        sha256: "fc23a425f11ca53d9b8cf234f6b6a492d179ba2c853d8c020660877ed26abd92"
+      - type: artifact_hash
+        ref: "examples/portfolio.csv"
+        sha256: "1f6e6ec2eebae6047527705a768c13234940cd797a4be9984368459b57b39dba"
+
+  # --- Public gate API --------------------------------------------------------
+
+  - id: C010
+    claim: >-
+      MarketSentimentReport.verification is a VerificationGate — an immutable,
+      frozen dataclass vendored from cubiczan-resilience v0.2.1: field
+      assignment raises FrozenInstanceError and dataclasses.replace derives a
+      new frozen instance, leaving the original untouched.
+    source: "README.md#public-api-the-verification-gate"
+    evidence:
+      - type: test
+        ref: "tests/test_frozen_gate.py::test_gate_field_assignment_raises_frozen_instance_error"
+      - type: test
+        ref: "tests/test_frozen_gate.py::test_gate_confidence_assignment_also_frozen"
+      - type: test
+        ref: "tests/test_frozen_gate.py::test_replace_produces_a_valid_frozen_copy"
+      - type: test
+        ref: "tests/test_frozen_gate.py::test_replace_on_a_clear_gate_downgrades_without_mutation"
+      - type: test
+        ref: "tests/test_frozen_gate.py::test_vendored_copy_tracks_upstream_0_2_1_severity_hint"
+      - type: manifest_field
+        ref: "evidence/gate_manifest.json:gate.frozen_dataclass"
+        equals: true
+      - type: manifest_field
+        ref: "evidence/gate_manifest.json:gate.upstream_version"
+        equals: "0.2.1"
+      - type: script
+        ref: "scripts/verify_gate_manifest.py"
+        timeout_seconds: 120
+
+  # --- Dependency posture -----------------------------------------------------
+
+  - id: C011
+    claim: >-
+      Zero External Dependencies: the engine runs entirely on the Python
+      standard library — pyproject.toml declares dependencies = [], and the
+      only non-stdlib import in src/ is the optional Airbyte SDK, guarded by
+      try/except ImportError.
+    source: "README.md#key-features"
+    evidence:
+      - type: script
+        ref: "scripts/verify_zero_deps.py"
+        timeout_seconds: 120
+      - type: artifact_hash
+        ref: "pyproject.toml"
+        sha256: "7e759e9fdab283b15574965f8eeb271022f0229de6c080e217243bc1b716e38c"
+
+  # --- Airbyte integration ----------------------------------------------------
+
+  - id: C012
+    claim: >-
+      The Airbyte bridge imports cleanly without the optional SDK and falls
+      back to the included CSV example data when no credentials are configured:
+      fetch_live_indicators returns all six required indicators, the async
+      analyze_market_via_airbyte path reports data_source csv_fallback and
+      passes the verification gate offline, and get_mcp_config exposes the
+      documented MCP server URL.
+    source: "README.md#airbyte-integration"
+    evidence:
+      - type: test
+        ref: "tests/test_airbyte_providers.py::test_module_imports_without_the_optional_sdk"
+      - type: test
+        ref: "tests/test_airbyte_providers.py::test_fetch_live_indicators_falls_back_to_csv_without_credentials"
+      - type: test
+        ref: "tests/test_airbyte_providers.py::test_analyze_via_airbyte_offline_run_passes_the_gate"
+      - type: test
+        ref: "tests/test_airbyte_providers.py::test_get_mcp_config_exposes_the_documented_server_url"
+
+  - id: C013
+    claim: >-
+      The FRED Series Mappings table matches the code: vix maps to VIXCLS,
+      put_call to CBOE_PC, consumer_confidence and umich_sentiment to UMCSENT,
+      while aaii_bull_bear and naaim_exposure have no FRED series and fall back
+      to the local CSV file.
+    source: "README.md#fred-series-mappings"
+    evidence:
+      - type: test
+        ref: "tests/test_airbyte_providers.py::test_fred_series_map_matches_the_readme_table"
+      - type: script
+        ref: "scripts/verify_fred_mappings.py"
+        timeout_seconds: 120
+
+  # --- Public Python API ------------------------------------------------------
+
+  - id: C014
+    claim: >-
+      The public Python API is `from market_sentiment_fedgpt import
+      analyze_market`; the synchronous local-file path is unchanged by the
+      Airbyte integration (additive only), and reports expose regime, fed_tone,
+      sentiment_score, policy_path, and verification fields.
+    source: "README.md#python-api"
+    evidence:
+      - type: test
+        ref: "tests/test_basic.py::TestPackageImports::test_package_imports"
+      - type: test
+        ref: "tests/test_basic.py::TestPackageImports::test_all_exports"
+      - type: test
+        ref: "tests/test_airbyte_providers.py::test_synchronous_analyze_market_remains_untouched_by_the_bridge"
+      - type: script
+        ref: "scripts/verify_core_claims.py"
+        timeout_seconds: 120
