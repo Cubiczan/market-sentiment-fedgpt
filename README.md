@@ -94,8 +94,11 @@ pip install -e .
 Or install the test dependencies alongside the package:
 
 ```bash
-pip install -e ".[dev]"
+pip install -e .
+pip install -r requirements.txt
 ```
+
+(`requirements.txt` adds pytest and the optional Airbyte SDK; the package itself defines no extras.)
 
 ### Quick Start
 
@@ -311,7 +314,8 @@ cp .env.example .env
 2. Install the dependencies:
 
 ```bash
-pip install -e ".[dev]"
+pip install -e .
+pip install -r requirements.txt
 pip install airbyte-agent-sdk
 ```
 
@@ -373,8 +377,23 @@ The existing `analyze_market()` function in `core.py` is completely unchanged. I
 | aaii_bull_bear     | —              | Not in FRED; falls back to CSV             |
 | naaim_exposure     | —              | Not in FRED; falls back to CSV             |
 
-Indicators without a FRED series mapping are automatically filled from the local CSV fallback file, ensuring all six required indicators are always present for the verification gate.
+Indicators without a FRED series mapping are automatically filled from the local CSV fallback file. Live fetches fill from the CSV fallback whenever fewer than four indicators are retrieved live, so offline runs (no credentials configured) always present all six required indicators to the verification gate.
 
 ### Future Connectors
 
 When Airbyte adds financial data connectors to its catalog (FRED, Alpha Vantage, SEC EDGAR), they can be wired into `airbyte_providers.py` without changes to `core.py`. The module is designed as a thin data-fetching layer that produces the same dict format the core engine already consumes.
+
+## Evidence matrix
+
+Every capability claim in this file is backed by
+[`evidence/matrix.yaml`](evidence/matrix.yaml); CI refuses builds while any row
+is unverifiable (run `python3 tools/verify_evidence_matrix.py` locally).
+
+The verifier at `tools/verify_evidence_matrix.py` is a byte-identical,
+version-stamped copy vendored from the canonical standard kit
+([icohangar-ops/consensus-hardening-protocol](https://github.com/icohangar-ops/consensus-hardening-protocol),
+`tools/verify_evidence_matrix.py`, `EVIDENCE_MATRIX_VERIFIER_VERSION = "1.0.0"`),
+vendored from kit commit `88067e4` (PR #5). Drift against the canonical file is
+a one-line diff by design — do not edit this copy locally; the gate manifest at
+`evidence/gate_manifest.json` records the verification-gate contract and is
+cross-checked against the code by `scripts/verify_gate_manifest.py`.
